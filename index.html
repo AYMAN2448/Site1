@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>بنك الخرطوم - مولد الفواتير | إنشاء إيصال تحويل</title>
+    <!-- html2canvas + jsPDF libraries for PDF/Image generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #eef2f5;
+            font-family: 'Segoe UI', 'Tahoma', 'Arial', 'Cairo', sans-serif;
+            padding: 30px 20px;
+            color: #1e2a3e;
+        }
+
+        /* Main container */
+        .app-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+        }
+
+        /* Form panel */
+        .form-panel {
+            flex: 1.2;
+            min-width: 300px;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+            padding: 28px 24px;
+            transition: all 0.2s;
+        }
+
+        .invoice-panel {
+            flex: 1.4;
+            min-width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Card style for invoice preview */
+        .invoice-card {
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            transition: transform 0.2s;
+            border: 1px solid rgba(0, 73, 144, 0.15);
+        }
+
+        /* header bank */
+        .bank-header {
+            background: #003f6f;
+            padding: 18px 24px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            border-bottom: 3px solid #ffb347;
+        }
+
+        .bank-name {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .bank-sub {
+            font-size: 0.8rem;
+            opacity: 0.85;
+            font-weight: 300;
+        }
+
+        .invoice-title {
+            background: #f8fafc;
+            padding: 12px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .invoice-title h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #003f6f;
+            letter-spacing: -0.3px;
+        }
+
+        /* content details */
+        .invoice-details {
+            padding: 20px 24px 24px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            padding: 10px 0;
+            border-bottom: 1px dashed #e9edf2;
+            font-size: 0.95rem;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #2c3e50;
+            width: 40%;
+            font-size: 0.9rem;
+        }
+
+        .detail-value {
+            width: 55%;
+            text-align: left;
+            color: #1e2a3e;
+            font-weight: 500;
+            word-break: break-word;
+            direction: ltr;
+            text-align: right;
+        }
+
+        .amount-highlight {
+            background: #fef6e0;
+            margin: 16px 0;
+            padding: 16px 20px;
+            border-radius: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-right: 6px solid #ffb347;
+        }
+
+        .amount-label {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: #2c3e50;
+        }
+
+        .amount-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #003f6f;
+            letter-spacing: 1px;
+        }
+
+        .badge-status {
+            background: #e0f2e9;
+            color: #1f7840;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            display: inline-block;
+        }
+
+        .footer-note {
+            background: #f1f5f9;
+            padding: 14px 24px;
+            font-size: 0.7rem;
+            color: #4b5563;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        /* form styling */
+        .form-group {
+            margin-bottom: 18px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 700;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+            color: #1e3a5f;
+        }
+
+        input, select, textarea {
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1.5px solid #cbd5e1;
+            background: #fff;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #003f6f;
+            box-shadow: 0 0 0 3px rgba(0, 63, 111, 0.2);
+        }
+
+        .double-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        .double-group .form-group {
+            flex: 1;
+        }
+
+        button {
+            background: #003f6f;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 10px;
+            width: 100%;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: #002c4e;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 14px;
+            margin-top: 8px;
+        }
+
+        .action-buttons button {
+            background: #2c3e50;
+            margin-top: 0;
+        }
+
+        .action-buttons button:first-child {
+            background: #1f7840;
+        }
+
+        .action-buttons button:last-child {
+            background: #b95f1a;
+        }
+
+        hr {
+            margin: 16px 0;
+            border-color: #e2e8f0;
+        }
+
+        @media (max-width: 850px) {
+            .app-container {
+                flex-direction: column;
+            }
+            .detail-label, .detail-value {
+                width: 100%;
+                text-align: right;
+                margin-bottom: 5px;
+            }
+            .detail-value {
+                text-align: right;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- الجانب الأيمن: نموذج إدخال البيانات -->
+    <div class="form-panel">
+        <h2 style="color:#003f6f; margin-bottom: 20px; font-size: 1.6rem;">📝 إنشاء فاتورة تحويل</h2>
+        <form id="invoiceForm">
+            <div class="double-group">
+                <div class="form-group">
+                    <label>🔢 رقم العملية</label>
+                    <input type="text" id="transId" value="20643216803" placeholder="رقم العملية">
+                </div>
+                <div class="form-group">
+                    <label>📅 التاريخ والوقت</label>
+                    <input type="text" id="transDate" value="11-Jan-2026 21:45:36" placeholder="DD-MMM-YYYY HH:MM:SS">
+                </div>
+            </div>
+
+            <div class="double-group">
+                <div class="form-group">
+                    <label>🔄 نوع العملية</label>
+                    <input type="text" id="transType" value="تحويل إلى حساب آخر" placeholder="نوع التحويل">
+                </div>
+                <div class="form-group">
+                    <label>✅ الحالة</label>
+                    <select id="status">
+                        <option value="نجاح" selected>نجاح</option>
+                        <option value="قيد الانتظار">قيد الانتظار</option>
+                        <option value="فشل">فشل</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="double-group">
+                <div class="form-group">
+                    <label>💰 المبلغ (SDG)</label>
+                    <input type="number" id="amount" value="63000.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>👤 اسم المرسل إليه</label>
+                    <input type="text" id="recipient" value="ريان عمر عثمان محمد">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>🏦 من حساب</label>
+                <input type="text" id="fromAccount" value="0423 5330 2061 3001">
+            </div>
+            <div class="form-group">
+                <label>🏦 إلى حساب</label>
+                <input type="text" id="toAccount" value="1103 0261 1156 0001">
+            </div>
+
+            <div class="double-group">
+                <div class="form-group">
+                    <label>📱 رقم الموبايل</label>
+                    <input type="text" id="mobile" value="N/A" placeholder="رقم الجوال">
+                </div>
+                <div class="form-group">
+                    <label>💬 التعليق</label>
+                    <input type="text" id="comment" value="N/A" placeholder="تعليق">
+                </div>
+            </div>
+
+            <div class="double-group">
+                <div class="form-group">
+                    <label>⚠️ تحويل خاطئ</label>
+                    <select id="wrongTransfer">
+                        <option value="لا">لا</option>
+                        <option value="نعم">نعم</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>📌 تذكير</label>
+                    <input type="text" id="reminder" value="N/A" placeholder="تذكير / ملاحظة">
+                </div>
+            </div>
+
+            <button type="button" id="generateBtn">✨ إنشاء الفاتورة ✨</button>
+        </form>
+        <div class="action-buttons">
+            <button id="downloadPdfBtn">📄 تحميل PDF</button>
+            <button id="downloadImageBtn">🖼️ تحميل كصورة</button>
+        </div>
+        <hr>
+        <div style="font-size: 0.7rem; text-align: center; color: #5f6c80;">* تعبئة البيانات ثم الضغط على إنشاء الفاتورة، ويمكن حفظها PDF أو صورة بنفس الألوان والنصوص</div>
+    </div>
+
+    <!-- معاينة الفاتورة المستندة إلى بيانات الصور -->
+    <div class="invoice-panel">
+        <div class="invoice-card" id="invoiceContainer">
+            <!-- سيتم ملء المحتوى ديناميكياً عبر JavaScript -->
+        </div>
+        <div class="invoice-card" style="background: transparent; box-shadow: none; text-align: center; font-size: 0.75rem; color: #3b5c7a;">
+            © 2024 بنك الخرطوم | نظام الفواتير التجريبي - إيصال إلكتروني
+        </div>
+    </div>
+</div>
+
+<script>
+    // دالة لعرض الفاتورة بناءً على بيانات المدخلات
+    function renderInvoice() {
+        // قراءة القيم من الحقول
+        const transId = document.getElementById('transId').value.trim() || "غير محدد";
+        const transDate = document.getElementById('transDate').value.trim() || "N/A";
+        const transType = document.getElementById('transType').value.trim() || "تحويل";
+        const status = document.getElementById('status').value;
+        let amountRaw = document.getElementById('amount').value;
+        let amountNum = parseFloat(amountRaw);
+        if (isNaN(amountNum)) amountNum = 0;
+        const amountFormatted = amountNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        
+        const fromAccount = document.getElementById('fromAccount').value.trim() || "----";
+        const toAccount = document.getElementById('toAccount').value.trim() || "----";
+        const recipient = document.getElementById('recipient').value.trim() || "مستفيد";
+        const mobile = document.getElementById('mobile').value.trim() || "N/A";
+        const comment = document.getElementById('comment').value.trim() || "N/A";
+        const wrongTransfer = document.getElementById('wrongTransfer').value;
+        const reminder = document.getElementById('reminder').value.trim() || "N/A";
+
+        // تحديد لون حالة النجاح
+        let statusBadgeClass = '';
+        let statusText = status;
+        if (status === 'نجاح') statusBadgeClass = 'badge-status';
+        else if (status === 'قيد الانتظار') statusBadgeClass = 'badge-status' + ' wait';
+        else statusBadgeClass = 'badge-status';
+
+        // بناء هيكل الفاتورة مشابهة للصور - تصميم أنيق مع الحفاظ على ألوان ونصوص مطابقة للبنك
+        const invoiceHTML = `
+            <div class="bank-header">
+                <div class="bank-name">بنك الخرطوم</div>
+                <div class="bank-sub">Bank of Khartoum</div>
+            </div>
+            <div class="invoice-title">
+                <h2>تحويلات</h2>
+                <span style="font-size: 12px; color:#4b6b8a;">إيصال تحويل إلكتروني</span>
+            </div>
+            <div class="invoice-details">
+                <div class="detail-row">
+                    <span class="detail-label">📌 رقم العملية</span>
+                    <span class="detail-value">${escapeHtml(transId)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">⏱️ التاريخ والوقت</span>
+                    <span class="detail-value">${escapeHtml(transDate)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">🔄 نوع العملية</span>
+                    <span class="detail-value">${escapeHtml(transType)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">📊 الحالة</span>
+                    <span class="detail-value"><span class="${statusBadgeClass}">${escapeHtml(statusText)}</span></span>
+                </div>
+                
+                <!-- مبلغ بارز مثل الصور -->
+                <div class="amount-highlight">
+                    <span class="amount-label">المبلغ الإجمالي</span>
+                    <span class="amount-value">${escapeHtml(amountFormatted)} SDG</span>
+                </div>
+
+                <div class="detail-row">
+                    <span class="detail-label">🏦 من حساب</span>
+                    <span class="detail-value" dir="ltr" style="font-family: monospace;">${escapeHtml(fromAccount)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">🏦 إلى حساب</span>
+                    <span class="detail-value" dir="ltr" style="font-family: monospace;">${escapeHtml(toAccount)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">👤 اسم المرسل إليه</span>
+                    <span class="detail-value">${escapeHtml(recipient)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">📱 رقم الموبايل</span>
+                    <span class="detail-value">${escapeHtml(mobile)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">💬 التعليق</span>
+                    <span class="detail-value">${escapeHtml(comment)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">⚠️ تحويل خاطئ</span>
+                    <span class="detail-value">${escapeHtml(wrongTransfer)}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">📌 تذكير</span>
+                    <span class="detail-value">${escapeHtml(reminder)}</span>
+                </div>
+            </div>
+            <div class="footer-note">
+                <span>🔒 معاملة آمنة</span>
+                <span>رقم المرجع: ${escapeHtml(transId.slice(-6))}</span>
+                <span>📱 خدمة العملاء 19600</span>
+            </div>
+        `;
+        
+        const container = document.getElementById('invoiceContainer');
+        if (container) {
+            container.innerHTML = invoiceHTML;
+        } else {
+            console.warn("invoiceContainer not found");
+        }
+    }
+
+    // دالة مساعدة لتفادي XSS
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+
+    // تحميل الفاتورة كصورة (PNG) باستخدام html2canvas
+    async function downloadAsImage() {
+        const invoiceElement = document.getElementById('invoiceContainer');
+        if (!invoiceElement) {
+            alert("لم يتم العثور على الفاتورة!");
+            return;
+        }
+        try {
+            // إضافة خلفية بيضاء ناصعة للصورة وجودة عالية
+            const canvas = await html2canvas(invoiceElement, {
+                scale: 2.5,
+                backgroundColor: '#ffffff',
+                logging: false,
+                useCORS: false,
+                allowTaint: false,
+            });
+            const imageData = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            const transIdValue = document.getElementById('transId').value.trim() || "invoice";
+            link.download = `فاتورة_بنك_الخرطوم_${transIdValue}.png`;
+            link.href = imageData;
+            link.click();
+        } catch (error) {
+            console.error("خطأ في تحويل الصورة: ", error);
+            alert("حدث خطأ أثناء إنشاء الصورة، حاول مرة أخرى.");
+        }
+    }
+
+    // تحميل الفاتورة كملف PDF (جودة عالية مع الحفاظ على الألوان والنصوص)
+    async function downloadAsPDF() {
+        const invoiceElement = document.getElementById('invoiceContainer');
+        if (!invoiceElement) {
+            alert("لا توجد فاتورة لتحميلها");
+            return;
+        }
+        try {
+            // تحويل العنصر إلى Canvas بدقة عالية
+            const canvas = await html2canvas(invoiceElement, {
+                scale: 3,
+                backgroundColor: '#ffffff',
+                logging: false,
+                useCORS: false
+            });
+            const imgData = canvas.toDataURL('image/png');
+            const { jsPDF } = window.jspdf;
+            // استخدام orientation portrait، وحدة mm
+            const imgWidth = 210; // عرض A4 بالـ mm
+            const pageHeight = 297;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let pdf = new jsPDF('p', 'mm', 'a4');
+            let position = 0;
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            // إذا تجاوز الطول صفحة واحدة فقط
+            if (imgHeight > pageHeight) {
+                let heightLeft = imgHeight - pageHeight;
+                position = -pageHeight;
+                while (heightLeft > 0) {
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                    position -= pageHeight;
+                }
+            }
+            const transIdValue = document.getElementById('transId').value.trim() || "invoice";
+            pdf.save(`فاتورة_تحويل_${transIdValue}.pdf`);
+        } catch (err) {
+            console.error("PDF generation error:", err);
+            alert("تعذر إنشاء ملف PDF، تأكد من الاتصال أو حاول مجدداً");
+        }
+    }
+
+    // تهيئة القيم الافتراضية تطابق الصور تماما ثم عرض الفاتورة الأولية
+    function setDefaultExampleValues() {
+        // التأكد من أن القيم الافتراضية هي نفسها الموجودة في صور المعاملة
+        if (document.getElementById('transId')) document.getElementById('transId').value = "20643216803";
+        if (document.getElementById('transDate')) document.getElementById('transDate').value = "11-Jan-2026 21:45:36";
+        if (document.getElementById('transType')) document.getElementById('transType').value = "تحويل إلى حساب آخر";
+        if (document.getElementById('amount')) document.getElementById('amount').value = "63000.00";
+        if (document.getElementById('fromAccount')) document.getElementById('fromAccount').value = "0423 5330 2061 3001";
+        if (document.getElementById('toAccount')) document.getElementById('toAccount').value = "1103 0261 1156 0001";
+        if (document.getElementById('status')) document.getElementById('status').value = "نجاح";
+        if (document.getElementById('recipient')) document.getElementById('recipient').value = "ريان عمر عثمان محمد";
+        if (document.getElementById('mobile')) document.getElementById('mobile').value = "N/A";
+        if (document.getElementById('comment')) document.getElementById('comment').value = "N/A";
+        if (document.getElementById('wrongTransfer')) document.getElementById('wrongTransfer').value = "لا";
+        if (document.getElementById('reminder')) document.getElementById('reminder').value = "N/A";
+    }
+
+    // حدث عند تحميل الصفحة
+    window.addEventListener('DOMContentLoaded', () => {
+        // ضبط القيم الافتراضية وفق الصور المرفقة
+        setDefaultExampleValues();
+        // عرض الفاتورة لأول مرة
+        renderInvoice();
+        
+        // ربط أزرار التحكم
+        const generateBtn = document.getElementById('generateBtn');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', () => {
+                renderInvoice();
+            });
+        }
+        
+        const pdfBtn = document.getElementById('downloadPdfBtn');
+        if (pdfBtn) {
+            pdfBtn.addEventListener('click', downloadAsPDF);
+        }
+        
+        const imgBtn = document.getElementById('downloadImageBtn');
+        if (imgBtn) {
+            imgBtn.addEventListener('click', downloadAsImage);
+        }
+        
+        // إضافة خاصية: الضغط على Enter في الحقول لا يؤدي إلا لتحديث يدوي عبر الزر فقط، لكننا نعطي مرونة
+        const allInputs = document.querySelectorAll('#invoiceForm input, #invoiceForm select');
+        allInputs.forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    renderInvoice();
+                }
+            });
+        });
+    });
+    
+    // إعادة تعيين ديناميكية للألوان والمحافظة على الهيكل, وكذلك دعم التحميل المتوافق
+    // نضيف دعمًا للطباعة / الحفاظ على التنسيق تمامًا مثل الصور المرفقة: 
+    // قامت الفاتورة بعرض "تحويل خاطئ" و "تذكير" كما هو موجود بالصورة الأولى، 
+    // وعرض "رقم الموبايل" و التعليق كما بالصورة الثانية، وألوان مأخوذة من تصميم بنك الخرطوم.
+    // نضمن ظهور المبلغ بالخط العريض ونسق الألوان (أزرق داكن وذهبي فاتح) أسوة بالصورة.
+</script>
+</body>
+  </html>
